@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f1923">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SkillsMetrix – Trainer Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b1320;
+    --surface: #111d2e;
+    --surface2: #162236;
+    --border: rgba(255,255,255,0.07);
+    --accent: #00d4aa;
+    --accent2: #ff6b47;
+    --accent3: #7c6fef;
+    --text: #e8edf5;
+    --muted: #6b7e96;
+    --danger: #ff4d6d;
+    --warning: #ffb347;
+    --success: #00d4aa;
+    --card-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+
+  /* LOGIN */
+  #login-screen {
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background: radial-gradient(ellipse at 30% 50%, #0d2a3e 0%, var(--bg) 60%);
+    position:relative; overflow:hidden;
+  }
+  #login-screen::before {
+    content:''; position:absolute; width:600px; height:600px; border-radius:50%;
+    background: radial-gradient(circle, rgba(0,212,170,0.06), transparent 70%);
+    top:-100px; right:-100px; pointer-events:none;
+  }
+  .login-box {
+    background:var(--surface); border:1px solid var(--border); border-radius:20px;
+    padding:48px 40px; width:380px; max-width:95vw; box-shadow:var(--card-shadow);
+    animation: fadeUp 0.5s ease;
+  }
+  .login-logo { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--accent); letter-spacing:-1px; margin-bottom:6px; }
+  .login-sub { color:var(--muted); font-size:13px; margin-bottom:32px; }
+  .login-tabs { display:flex; gap:8px; margin-bottom:24px; }
+  .login-tab {
+    flex:1; padding:10px; border-radius:10px; border:1px solid var(--border);
+    background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif;
+    font-size:13px; cursor:pointer; transition:all .2s;
+  }
+  .login-tab.active { background:var(--accent); border-color:var(--accent); color:#000; font-weight:600; }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; letter-spacing:.5px; text-transform:uppercase; }
+  input[type=text],input[type=password],input[type=email],input[type=date],input[type=time],select,textarea {
+    width:100%; background:var(--bg); border:1px solid var(--border); border-radius:10px;
+    padding:12px 14px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px;
+    outline:none; transition:border .2s; margin-bottom:16px;
+  }
+  input:focus,select:focus,textarea:focus { border-color:var(--accent); }
+  textarea { resize:vertical; min-height:80px; }
+  .btn {
+    width:100%; padding:14px; border-radius:10px; border:none; cursor:pointer;
+    font-family:'Syne',sans-serif; font-size:15px; font-weight:700; transition:all .2s;
+  }
+  .btn-primary { background:var(--accent); color:#000; }
+  .btn-primary:hover { background:#00f0c0; transform:translateY(-1px); }
+  .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+  .btn-sm { padding:8px 16px; font-size:12px; width:auto; border-radius:8px; }
+  .btn-danger { background:var(--danger); color:#fff; }
+
+  /* APP SHELL */
+  #app { display:none; min-height:100vh; flex-direction:column; }
+  #app.visible { display:flex; }
+
+  /* TOP NAV */
+  .topnav {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 24px; background:var(--surface); border-bottom:1px solid var(--border);
+    position:sticky; top:0; z-index:100; backdrop-filter:blur(10px);
+  }
+  .nav-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:20px; color:var(--accent); letter-spacing:-1px; }
+  .nav-user { display:flex; align-items:center; gap:12px; }
+  .user-badge {
+    background:var(--surface2); border:1px solid var(--border); padding:6px 14px;
+    border-radius:20px; font-size:12px; color:var(--muted);
+  }
+  .user-badge span { color:var(--accent); font-weight:600; }
+  .logout-btn { background:none; border:1px solid var(--border); color:var(--muted); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-family:'DM Sans',sans-serif; transition:all .2s; }
+  .logout-btn:hover { border-color:var(--danger); color:var(--danger); }
+
+  /* BOTTOM NAV (mobile) */
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0; background:var(--surface);
+    border-top:1px solid var(--border); display:flex; z-index:100;
+  }
+  .bnav-item {
+    flex:1; display:flex; flex-direction:column; align-items:center;
+    padding:10px 4px; cursor:pointer; transition:all .2s;
+    background:none; border:none; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:10px; gap:4px;
+  }
+  .bnav-item.active { color:var(--accent); }
+  .bnav-icon { font-size:20px; }
+
+  /* MAIN CONTENT */
+  .main { flex:1; padding:24px; padding-bottom:90px; max-width:900px; margin:0 auto; width:100%; }
+
+  /* PAGE HEADER */
+  .page-header { margin-bottom:28px; }
+  .page-title { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; letter-spacing:-0.5px; }
+  .page-sub { color:var(--muted); font-size:13px; margin-top:4px; }
+
+  /* CARDS */
+  .card {
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:20px; margin-bottom:16px; box-shadow:var(--card-shadow);
+  }
+  .card-title { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; }
+
+  /* STATS GRID */
+  .stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:20px; }
+  @media(min-width:600px){ .stats-grid { grid-template-columns:repeat(4,1fr); } }
+  .stat-card {
+    background:var(--surface2); border:1px solid var(--border); border-radius:14px;
+    padding:16px; text-align:center;
+  }
+  .stat-num { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; }
+  .stat-label { font-size:11px; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:.5px; }
+
+  /* SCHEDULE LIST */
+  .schedule-item {
+    display:flex; align-items:center; gap:16px; padding:16px;
+    background:var(--surface2); border-radius:12px; margin-bottom:10px;
+    border:1px solid var(--border); transition:all .2s; cursor:pointer;
+  }
+  .schedule-item:hover { border-color:rgba(0,212,170,0.3); }
+  .sch-date { min-width:52px; text-align:center; }
+  .sch-day { font-size:10px; color:var(--muted); text-transform:uppercase; }
+  .sch-num { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:var(--accent); line-height:1; }
+  .sch-info { flex:1; }
+  .sch-title { font-weight:500; font-size:14px; }
+  .sch-meta { font-size:12px; color:var(--muted); margin-top:3px; }
+  .sch-status { padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
+  .status-scheduled { background:rgba(124,111,239,0.2); color:var(--accent3); }
+  .status-completed { background:rgba(0,212,170,0.15); color:var(--accent); }
+  .status-pending { background:rgba(255,179,71,0.15); color:var(--warning); }
+  .status-cancelled { background:rgba(255,77,109,0.15); color:var(--danger); }
+
+  /* TRAINER CARDS */
+  .trainer-card {
+    display:flex; align-items:center; gap:14px; padding:16px;
+    background:var(--surface2); border-radius:12px; margin-bottom:10px; border:1px solid var(--border);
+  }
+  .avatar {
+    width:44px; height:44px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-family:'Syne',sans-serif; font-weight:800; font-size:16px; flex-shrink:0;
+  }
+  .trainer-info { flex:1; }
+  .trainer-name { font-weight:500; font-size:14px; }
+  .trainer-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+
+  /* COLLEGE LIST */
+  .college-item {
+    padding:14px 16px; background:var(--surface2); border-radius:12px;
+    margin-bottom:8px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;
+  }
+  .college-name { font-weight:500; font-size:14px; }
+  .college-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+  .topic-tag {
+    display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px;
+    background:rgba(124,111,239,0.2); color:var(--accent3); margin:2px 2px 0 0;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--surface); border:1px solid var(--border); border-radius:20px;
+    padding:28px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto;
+    animation:fadeUp .3s ease;
+  }
+  .modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; margin-bottom:20px; }
+  .modal-actions { display:flex; gap:10px; margin-top:8px; }
+  .modal-actions .btn { flex:1; }
+
+  /* REQUIREMENT CARDS */
+  .req-card {
+    padding:16px; background:var(--surface2); border-radius:12px; margin-bottom:10px;
+    border-left:3px solid var(--accent2); border-top:1px solid var(--border); border-right:1px solid var(--border); border-bottom:1px solid var(--border);
+  }
+  .req-title { font-weight:600; font-size:14px; }
+  .req-meta { font-size:12px; color:var(--muted); margin-top:4px; }
+  .req-desc { font-size:13px; color:#aab5c4; margin-top:8px; line-height:1.5; }
+
+  /* EMPTY STATE */
+  .empty { text-align:center; padding:48px 20px; color:var(--muted); }
+  .empty-icon { font-size:48px; margin-bottom:12px; }
+
+  /* FORM GRID */
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media(max-width:480px){ .form-row { grid-template-columns:1fr; } }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  .page { animation:fadeUp .3s ease; }
+  .hidden { display:none !important; }
+
+  /* NOTIFICATIONS */
+  .toast {
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--accent); color:#000; padding:12px 24px; border-radius:30px;
+    font-weight:600; font-size:13px; z-index:999; opacity:0; transition:all .3s;
+    white-space:nowrap;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* TABS */
+  .tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+  .tab-btn {
+    padding:8px 16px; border-radius:20px; border:1px solid var(--border);
+    background:transparent; color:var(--muted); font-size:12px; cursor:pointer;
+    font-family:'DM Sans',sans-serif; transition:all .2s;
+  }
+  .tab-btn.active { background:var(--accent); border-color:var(--accent); color:#000; font-weight:600; }
+
+  /* FAB */
+  .fab {
+    position:fixed; bottom:80px; right:20px; width:54px; height:54px; border-radius:50%;
+    background:var(--accent); border:none; color:#000; font-size:24px; cursor:pointer;
+    box-shadow:0 4px 20px rgba(0,212,170,0.4); z-index:150; transition:all .2s;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .fab:hover { transform:scale(1.1); }
+
+  .delete-btn {
+    background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px;
+    padding:4px 8px; border-radius:6px; transition:all .2s;
+  }
+  .delete-btn:hover { color:var(--danger); background:rgba(255,77,109,0.1); }
+
+  /* UPCOMING BADGE */
+  .upcoming-badge {
+    display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px;
+    font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+  }
+  .badge-high { background:rgba(255,77,109,0.2); color:var(--danger); }
+  .badge-med { background:rgba(255,179,71,0.2); color:var(--warning); }
+  .badge-low { background:rgba(0,212,170,0.15); color:var(--accent); }
+
+  select option { background: var(--surface); color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">SkillsMetrix</div>
+    <div class="login-sub">Trainer & College Management Platform</div>
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="setLoginRole('admin')">Admin / Team</button>
+      <button class="login-tab" onclick="setLoginRole('trainer')">Trainer</button>
+    </div>
+    <label>Username</label>
+    <input type="text" id="login-user" placeholder="Enter username">
+    <label>Password</label>
+    <input type="password" id="login-pass" placeholder="Enter password">
+    <button class="btn btn-primary" onclick="doLogin()">Sign In →</button>
+    <div style="margin-top:16px;font-size:11px;color:var(--muted);text-align:center;">
+      Demo: admin/admin123 &nbsp;|&nbsp; trainer/train123
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <nav class="topnav">
+    <div class="nav-logo">SkillsMetrix</div>
+    <div class="nav-user">
+      <div class="user-badge"><span id="nav-username">Admin</span> • <span id="nav-role">Admin</span></div>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="main" id="main-content"></div>
+
+  <nav class="bottom-nav" id="bottom-nav"></nav>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<!-- FAB -->
+<button class="fab hidden" id="fab" onclick="openFab()">+</button>
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA STORE =====
+const COLORS = ['#00d4aa','#ff6b47','#7c6fef','#ff4d6d','#ffb347','#4ecdc4','#a8e6cf'];
+const DATA = {
+  users: [
+    {id:'admin1',username:'admin',password:'admin123',role:'admin',name:'Admin Team'},
+    {id:'t1',username:'trainer',password:'train123',role:'trainer',name:'Rahul Sharma'},
+    {id:'t2',username:'priya',password:'train123',role:'trainer',name:'Priya Mehta'},
+    {id:'t3',username:'arjun',password:'train123',role:'trainer',name:'Arjun Nair'},
+  ],
+  colleges: [
+    {id:'c1',name:'MIT College of Engineering',city:'Pune',contact:'Dr. Patel',phone:'9876543210',topics:['Leadership','Communication','Time Management']},
+    {id:'c2',name:'SPIT – Shirpur',city:'Shirpur',contact:'Prof. Singh',phone:'9765432108',topics:['Soft Skills','Career Guidance']},
+    {id:'c3',name:'VIT Vellore',city:'Vellore',contact:'Dr. Rao',phone:'9654321087',topics:['Personality Development','Interview Skills']},
+  ],
+  sessions: [
+    {id:'s1',trainerId:'t1',collegeId:'c1',topic:'Leadership Workshop',date:'2026-03-05',time:'10:00',duration:3,status:'scheduled',notes:'Bring workbooks'},
+    {id:'s2',trainerId:'t2',collegeId:'c2',topic:'Soft Skills Bootcamp',date:'2026-03-08',time:'09:00',duration:4,status:'scheduled',notes:''},
+    {id:'s3',trainerId:'t1',collegeId:'c3',topic:'Interview Prep',date:'2026-02-20',time:'11:00',duration:2,status:'completed',notes:'Great response from students'},
+    {id:'s4',trainerId:'t3',collegeId:'c1',topic:'Time Management',date:'2026-03-15',time:'14:00',duration:2,status:'scheduled',notes:''},
+  ],
+  requirements: [
+    {id:'r1',collegeId:'c2',topic:'Digital Literacy Workshop',requestedDate:'2026-04-10',priority:'high',description:'Students need hands-on training on digital tools, Excel, and AI tools basics.',status:'open'},
+    {id:'r2',collegeId:'c3',topic:'Resume Building',requestedDate:'2026-03-25',priority:'medium',description:'Final year students need resume and LinkedIn profile guidance before placements.',status:'open'},
+    {id:'r3',collegeId:'c1',topic:'Public Speaking',requestedDate:'2026-05-01',priority:'low',description:'Improve overall communication and stage confidence for students.',status:'assigned'},
+  ]
+};
+
+let currentUser = null;
+let currentPage = 'dashboard';
+let loginRole = 'admin';
+
+function setLoginRole(role) {
+  loginRole = role;
+  document.querySelectorAll('.login-tab').forEach((t,i)=>{
+    t.classList.toggle('active', (i===0 && role==='admin')||(i===1 && role==='trainer'));
+  });
+}
+
+function doLogin(){
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value.trim();
+  const user = DATA.users.find(x=>x.username===u && x.password===p);
+  if(!user){showToast('Invalid credentials','error');return;}
+  currentUser = user;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('nav-username').textContent=user.name;
+  document.getElementById('nav-role').textContent=user.role==='admin'?'Admin':'Trainer';
+  buildNav();
+  navigate('dashboard');
+}
+
+function doLogout(){
+  currentUser=null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+}
+
+function buildNav(){
+  const isAdmin = currentUser.role==='admin';
+  const pages = isAdmin
+    ? [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'schedule',icon:'📅',label:'Schedule'},{id:'trainers',icon:'👥',label:'Trainers'},{id:'colleges',icon:'🏫',label:'Colleges'},{id:'requirements',icon:'📋',label:'Upcoming'}]
+    : [{id:'dashboard',icon:'📊',label:'Home'},{id:'schedule',icon:'📅',label:'My Schedule'},{id:'colleges',icon:'🏫',label:'Colleges'},{id:'requirements',icon:'📋',label:'Requirements'}];
+  
+  document.getElementById('bottom-nav').innerHTML = pages.map(p=>`
+    <button class="bnav-item" id="bnav-${p.id}" onclick="navigate('${p.id}')">
+      <span class="bnav-icon">${p.icon}</span>${p.label}
+    </button>
+  `).join('');
+}
+
+function navigate(page){
+  currentPage=page;
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+  const active = document.getElementById('bnav-'+page);
+  if(active) active.classList.add('active');
+  const fab = document.getElementById('fab');
+  fab.classList.add('hidden');
+  
+  const mc = document.getElementById('main-content');
+  mc.innerHTML='';
+  
+  if(page==='dashboard') renderDashboard();
+  else if(page==='schedule') renderSchedule();
+  else if(page==='trainers') renderTrainers();
+  else if(page==='colleges') renderColleges();
+  else if(page==='requirements') renderRequirements();
+}
+
+// ===== DASHBOARD =====
+function renderDashboard(){
+  const isAdmin = currentUser.role==='admin';
+  const sessions = isAdmin ? DATA.sessions : DATA.sessions.filter(s=>s.trainerId===currentUser.id);
+  const upcoming = sessions.filter(s=>s.status==='scheduled').length;
+  const completed = sessions.filter(s=>s.status==='completed').length;
+  
+  let html = `<div class="page">
+    <div class="page-header">
+      <div class="page-title">Welcome back, ${currentUser.name.split(' ')[0]} 👋</div>
+      <div class="page-sub">${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" style="color:var(--accent)">${upcoming}</div><div class="stat-label">Upcoming</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--accent3)">${completed}</div><div class="stat-label">Completed</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--accent2)">${DATA.colleges.length}</div><div class="stat-label">Colleges</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--warning)">${DATA.requirements.filter(r=>r.status==='open').length}</div><div class="stat-label">Open Reqs</div></div>
+    </div>`;
+
+  const nextSessions = sessions.filter(s=>s.status==='scheduled').sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
+  html += `<div class="card"><div class="card-title">Upcoming Sessions</div>`;
+  if(nextSessions.length===0) html+=`<div class="empty"><div class="empty-icon">📅</div><div>No upcoming sessions</div></div>`;
+  else nextSessions.forEach(s=>{
+    const college = DATA.colleges.find(c=>c.id===s.collegeId);
+    const trainer = DATA.users.find(u=>u.id===s.trainerId);
+    const d = new Date(s.date);
+    html+=`<div class="schedule-item" onclick="navigate('schedule')">
+      <div class="sch-date"><div class="sch-day">${d.toLocaleDateString('en',{weekday:'short'})}</div><div class="sch-num">${d.getDate()}</div></div>
+      <div class="sch-info">
+        <div class="sch-title">${s.topic}</div>
+        <div class="sch-meta">🏫 ${college?.name} &nbsp;•&nbsp; ⏰ ${s.time} &nbsp;•&nbsp; ${s.duration}h${isAdmin?` &nbsp;•&nbsp; 👤 ${trainer?.name}`:''}</div>
+      </div>
+      <span class="sch-status status-scheduled">Scheduled</span>
+    </div>`;
+  });
+  html+='</div>';
+
+  // Recent requirements
+  const reqs = DATA.requirements.filter(r=>r.status==='open').slice(0,2);
+  if(reqs.length>0){
+    html+=`<div class="card"><div class="card-title">New Training Requests</div>`;
+    reqs.forEach(r=>{
+      const college=DATA.colleges.find(c=>c.id===r.collegeId);
+      html+=`<div class="req-card">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div class="req-title">${r.topic}</div>
+          <span class="upcoming-badge badge-${r.priority}">${r.priority}</span>
+        </div>
+        <div class="req-meta">🏫 ${college?.name} &nbsp;•&nbsp; 📅 ${r.requestedDate}</div>
+        <div class="req-desc">${r.description}</div>
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  html+='</div>';
+  document.getElementById('main-content').innerHTML=html;
+}
+
+// ===== SCHEDULE =====
+function renderSchedule(){
+  const isAdmin = currentUser.role==='admin';
+  const fab = document.getElementById('fab');
+  if(isAdmin){ fab.classList.remove('hidden'); fab.onclick=()=>openSessionModal(); }
+  
+  let sessions = isAdmin ? DATA.sessions : DATA.sessions.filter(s=>s.trainerId===currentUser.id);
+  sessions = sessions.sort((a,b)=>a.date.localeCompare(b.date));
+
+  let html = `<div class="page">
+    <div class="page-header">
+      <div class="page-title">Training Schedule</div>
+      <div class="page-sub">${sessions.length} total sessions</div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="filterSessions('all',this)">All</button>
+      <button class="tab-btn" onclick="filterSessions('scheduled',this)">Upcoming</button>
+      <button class="tab-btn" onclick="filterSessions('completed',this)">Completed</button>
+    </div>
+    <div id="sessions-list">`;
+
+  if(sessions.length===0) html+=`<div class="empty"><div class="empty-icon">📅</div><div>No sessions found</div></div>`;
+  sessions.forEach(s=>{ html+=renderSessionItem(s,isAdmin); });
+  html+=`</div></div>`;
+  document.getElementById('main-content').innerHTML=html;
+}
+
+function renderSessionItem(s,isAdmin){
+  const college = DATA.colleges.find(c=>c.id===s.collegeId);
+  const trainer = DATA.users.find(u=>u.id===s.trainerId);
+  const d = new Date(s.date);
+  return `<div class="schedule-item" id="sess-${s.id}">
+    <div class="sch-date"><div class="sch-day">${d.toLocaleDateString('en',{weekday:'short'})}</div><div class="sch-num">${d.getDate()}</div><div style="font-size:10px;color:var(--muted)">${d.toLocaleDateString('en',{month:'short'})}</div></div>
+    <div class="sch-info" onclick="${isAdmin?`openSessionModal('${s.id}')`:''}" style="${isAdmin?'cursor:pointer':''}">
+      <div class="sch-title">${s.topic}</div>
+      <div class="sch-meta">🏫 ${college?.name} &nbsp;•&nbsp; ⏰ ${s.time} (${s.duration}h)${isAdmin?` &nbsp;•&nbsp; 👤 ${trainer?.name}`:''}</div>
+      ${s.notes?`<div style="font-size:11px;color:var(--muted);margin-top:4px;">📝 ${s.notes}</div>`:''}
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <span class="sch-status status-${s.status}">${s.status.charAt(0).toUpperCase()+s.status.slice(1)}</span>
+      ${isAdmin?`<button class="delete-btn" onclick="deleteSession('${s.id}')">🗑</button>`:''}
+      ${!isAdmin&&s.status==='scheduled'?`<button class="btn btn-sm btn-primary" onclick="markComplete('${s.id}')">Done</button>`:''}
+    </div>
+  </div>`;
+}
+
+function filterSessions(filter, btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const isAdmin = currentUser.role==='admin';
+  let sessions = isAdmin ? DATA.sessions : DATA.sessions.filter(s=>s.trainerId===currentUser.id);
+  if(filter!=='all') sessions=sessions.filter(s=>s.status===filter);
+  sessions=sessions.sort((a,b)=>a.date.localeCompare(b.date));
+  const list=document.getElementById('sessions-list');
+  if(sessions.length===0){list.innerHTML=`<div class="empty"><div class="empty-icon">📅</div><div>No sessions</div></div>`;return;}
+  list.innerHTML=sessions.map(s=>renderSessionItem(s,isAdmin)).join('');
+}
+
+function markComplete(id){
+  const s=DATA.sessions.find(x=>x.id===id);
+  if(s){s.status='completed';renderSchedule();showToast('Marked as completed!');}
+}
+
+function deleteSession(id){
+  DATA.sessions=DATA.sessions.filter(x=>x.id!==id);
+  renderSchedule();showToast('Session deleted');
+}
+
+function openSessionModal(editId){
+  const s = editId ? DATA.sessions.find(x=>x.id===editId) : null;
+  const trainers = DATA.users.filter(u=>u.role==='trainer');
+  
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">${s?'Edit Session':'New Session'}</div>
+    <label>Trainer</label>
+    <select id="m-trainer">
+      ${trainers.map(t=>`<option value="${t.id}" ${s?.trainerId===t.id?'selected':''}>${t.name}</option>`).join('')}
+    </select>
+    <label>College</label>
+    <select id="m-college">
+      ${DATA.colleges.map(c=>`<option value="${c.id}" ${s?.collegeId===c.id?'selected':''}>${c.name}</option>`).join('')}
+    </select>
+    <label>Topic</label>
+    <input type="text" id="m-topic" value="${s?.topic||''}" placeholder="e.g. Leadership Workshop">
+    <div class="form-row">
+      <div><label>Date</label><input type="date" id="m-date" value="${s?.date||''}"></div>
+      <div><label>Time</label><input type="time" id="m-time" value="${s?.time||''}"></div>
+    </div>
+    <label>Duration (hours)</label>
+    <input type="text" id="m-dur" value="${s?.duration||2}" placeholder="e.g. 3">
+    <label>Status</label>
+    <select id="m-status">
+      ${['scheduled','completed','pending','cancelled'].map(st=>`<option value="${st}" ${s?.status===st?'selected':''}>${st.charAt(0).toUpperCase()+st.slice(1)}</option>`).join('')}
+    </select>
+    <label>Notes</label>
+    <textarea id="m-notes">${s?.notes||''}</textarea>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSession('${editId||''}')">Save</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function saveSession(editId){
+  const obj = {
+    id: editId || 's'+Date.now(),
+    trainerId: document.getElementById('m-trainer').value,
+    collegeId: document.getElementById('m-college').value,
+    topic: document.getElementById('m-topic').value,
+    date: document.getElementById('m-date').value,
+    time: document.getElementById('m-time').value,
+    duration: parseInt(document.getElementById('m-dur').value)||2,
+    status: document.getElementById('m-status').value,
+    notes: document.getElementById('m-notes').value,
+  };
+  if(!obj.topic||!obj.date){showToast('Fill in required fields','error');return;}
+  if(editId) { const i=DATA.sessions.findIndex(x=>x.id===editId); DATA.sessions[i]=obj; }
+  else DATA.sessions.push(obj);
+  closeModal(); renderSchedule(); showToast('Session saved!');
+}
+
+function openFab(){
+  if(currentPage==='schedule') openSessionModal();
+  else if(currentPage==='trainers') openTrainerModal();
+  else if(currentPage==='colleges') openCollegeModal();
+  else if(currentPage==='requirements') openRequirementModal();
+}
+
+// ===== TRAINERS =====
+function renderTrainers(){
+  const fab=document.getElementById('fab');
+  fab.classList.remove('hidden');
+  fab.onclick=()=>openTrainerModal();
+  const trainers=DATA.users.filter(u=>u.role==='trainer');
+  let html=`<div class="page">
+    <div class="page-header"><div class="page-title">Trainers</div><div class="page-sub">${trainers.length} active trainers</div></div>`;
+  trainers.forEach((t,i)=>{
+    const sessions=DATA.sessions.filter(s=>s.trainerId===t.id);
+    const upcoming=sessions.filter(s=>s.status==='scheduled').length;
+    const done=sessions.filter(s=>s.status==='completed').length;
+    html+=`<div class="trainer-card">
+      <div class="avatar" style="background:${COLORS[i%COLORS.length]}20;color:${COLORS[i%COLORS.length]}">${t.name.split(' ').map(n=>n[0]).join('')}</div>
+      <div class="trainer-info">
+        <div class="trainer-name">${t.name}</div>
+        <div class="trainer-meta">👤 @${t.username} &nbsp;•&nbsp; 📅 ${upcoming} upcoming &nbsp;•&nbsp; ✅ ${done} done</div>
+      </div>
+      <button class="delete-btn" onclick="deleteTrainer('${t.id}')">🗑</button>
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('main-content').innerHTML=html;
+}
+
+function openTrainerModal(){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">Add Trainer</div>
+    <label>Full Name</label><input type="text" id="mt-name" placeholder="e.g. Priya Sharma">
+    <label>Username</label><input type="text" id="mt-user" placeholder="login username">
+    <label>Password</label><input type="password" id="mt-pass" placeholder="set password">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTrainer()">Add Trainer</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function saveTrainer(){
+  const name=document.getElementById('mt-name').value.trim();
+  const user=document.getElementById('mt-user').value.trim();
+  const pass=document.getElementById('mt-pass').value.trim();
+  if(!name||!user||!pass){showToast('Fill all fields','error');return;}
+  DATA.users.push({id:'t'+Date.now(),username:user,password:pass,role:'trainer',name});
+  closeModal();renderTrainers();showToast('Trainer added!');
+}
+
+function deleteTrainer(id){
+  DATA.users=DATA.users.filter(u=>u.id!==id);
+  renderTrainers();showToast('Trainer removed');
+}
+
+// ===== COLLEGES =====
+function renderColleges(){
+  const isAdmin=currentUser.role==='admin';
+  const fab=document.getElementById('fab');
+  if(isAdmin){fab.classList.remove('hidden');fab.onclick=()=>openCollegeModal();}
+  let html=`<div class="page">
+    <div class="page-header"><div class="page-title">College Clients</div><div class="page-sub">${DATA.colleges.length} colleges</div></div>`;
+  DATA.colleges.forEach(c=>{
+    const sessions=DATA.sessions.filter(s=>s.collegeId===c.id);
+    html+=`<div class="college-item">
+      <div>
+        <div class="college-name">${c.name}</div>
+        <div class="college-meta">📍 ${c.city} &nbsp;•&nbsp; 👤 ${c.contact} &nbsp;•&nbsp; 📞 ${c.phone}</div>
+        <div style="margin-top:8px">${c.topics.map(t=>`<span class="topic-tag">${t}</span>`).join('')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">${sessions.length} sessions total</div>
+      </div>
+      ${isAdmin?`<button class="delete-btn" onclick="deleteCollege('${c.id}')">🗑</button>`:''}
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('main-content').innerHTML=html;
+}
+
+function openCollegeModal(){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">Add College</div>
+    <label>College Name</label><input type="text" id="mc-name" placeholder="e.g. MIT College of Engineering">
+    <div class="form-row">
+      <div><label>City</label><input type="text" id="mc-city" placeholder="City"></div>
+      <div><label>Contact Person</label><input type="text" id="mc-contact" placeholder="Name/Title"></div>
+    </div>
+    <label>Phone</label><input type="text" id="mc-phone" placeholder="Contact number">
+    <label>Topics (comma separated)</label><input type="text" id="mc-topics" placeholder="Leadership, Communication">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCollege()">Add College</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function saveCollege(){
+  const name=document.getElementById('mc-name').value.trim();
+  if(!name){showToast('Enter college name','error');return;}
+  DATA.colleges.push({
+    id:'c'+Date.now(),
+    name,
+    city:document.getElementById('mc-city').value.trim(),
+    contact:document.getElementById('mc-contact').value.trim(),
+    phone:document.getElementById('mc-phone').value.trim(),
+    topics:document.getElementById('mc-topics').value.split(',').map(t=>t.trim()).filter(Boolean)
+  });
+  closeModal();renderColleges();showToast('College added!');
+}
+
+function deleteCollege(id){
+  DATA.colleges=DATA.colleges.filter(c=>c.id!==id);
+  renderColleges();showToast('College removed');
+}
+
+// ===== REQUIREMENTS =====
+function renderRequirements(){
+  const isAdmin=currentUser.role==='admin';
+  const fab=document.getElementById('fab');
+  fab.classList.remove('hidden'); fab.onclick=()=>openRequirementModal();
+  let html=`<div class="page">
+    <div class="page-header"><div class="page-title">Upcoming Requirements</div><div class="page-sub">New training requests from colleges</div></div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="filterReqs('all',this)">All</button>
+      <button class="tab-btn" onclick="filterReqs('open',this)">Open</button>
+      <button class="tab-btn" onclick="filterReqs('assigned',this)">Assigned</button>
+    </div>
+    <div id="reqs-list">`;
+  DATA.requirements.forEach(r=>{ html+=renderReqItem(r,isAdmin); });
+  html+=`</div></div>`;
+  document.getElementById('main-content').innerHTML=html;
+}
+
+function renderReqItem(r,isAdmin){
+  const college=DATA.colleges.find(c=>c.id===r.collegeId);
+  return `<div class="req-card" id="req-${r.id}">
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+      <div class="req-title">${r.topic}</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <span class="upcoming-badge badge-${r.priority}">${r.priority}</span>
+        ${isAdmin?`<button class="delete-btn" onclick="deleteReq('${r.id}')">🗑</button>`:''}
+      </div>
+    </div>
+    <div class="req-meta">🏫 ${college?.name} &nbsp;•&nbsp; 📅 ${r.requestedDate} &nbsp;•&nbsp; 
+      <span style="color:${r.status==='open'?'var(--warning)':'var(--accent)'}">${r.status.toUpperCase()}</span>
+    </div>
+    <div class="req-desc">${r.description}</div>
+    ${isAdmin&&r.status==='open'?`<div style="margin-top:10px"><button class="btn btn-sm btn-primary" onclick="assignReq('${r.id}')">Assign Trainer →</button></div>`:''}
+  </div>`;
+}
+
+function filterReqs(filter,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const isAdmin=currentUser.role==='admin';
+  let reqs=filter==='all'?DATA.requirements:DATA.requirements.filter(r=>r.status===filter);
+  document.getElementById('reqs-list').innerHTML=reqs.length===0
+    ?`<div class="empty"><div class="empty-icon">📋</div><div>No requirements</div></div>`
+    :reqs.map(r=>renderReqItem(r,isAdmin)).join('');
+}
+
+function assignReq(id){
+  const r=DATA.requirements.find(x=>x.id===id);
+  const trainers=DATA.users.filter(u=>u.role==='trainer');
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">Assign Trainer</div>
+    <div style="margin-bottom:16px;color:var(--muted);font-size:13px">📋 ${r.topic}</div>
+    <label>Select Trainer</label>
+    <select id="ar-trainer">${trainers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}</select>
+    <label>Proposed Date</label><input type="date" id="ar-date">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAssign('${id}')">Assign & Schedule</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function confirmAssign(reqId){
+  const r=DATA.requirements.find(x=>x.id===reqId);
+  const trainerId=document.getElementById('ar-trainer').value;
+  const date=document.getElementById('ar-date').value;
+  r.status='assigned';
+  if(date){
+    DATA.sessions.push({id:'s'+Date.now(),trainerId,collegeId:r.collegeId,topic:r.topic,date,time:'10:00',duration:3,status:'scheduled',notes:'From requirement #'+reqId});
+  }
+  closeModal();renderRequirements();showToast('Assigned & session created!');
+}
+
+function openRequirementModal(){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-title">New Training Requirement</div>
+    <label>College</label>
+    <select id="mr-college">${DATA.colleges.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select>
+    <label>Topic / Program</label><input type="text" id="mr-topic" placeholder="e.g. Digital Literacy Workshop">
+    <div class="form-row">
+      <div><label>Requested Date</label><input type="date" id="mr-date"></div>
+      <div><label>Priority</label>
+        <select id="mr-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
+      </div>
+    </div>
+    <label>Description</label><textarea id="mr-desc" placeholder="Details about what's needed..."></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRequirement()">Add Requirement</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function saveRequirement(){
+  const topic=document.getElementById('mr-topic').value.trim();
+  if(!topic){showToast('Enter a topic','error');return;}
+  DATA.requirements.push({
+    id:'r'+Date.now(),
+    collegeId:document.getElementById('mr-college').value,
+    topic,
+    requestedDate:document.getElementById('mr-date').value||'TBD',
+    priority:document.getElementById('mr-priority').value,
+    description:document.getElementById('mr-desc').value,
+    status:'open'
+  });
+  closeModal();renderRequirements();showToast('Requirement added!');
+}
+
+function deleteReq(id){
+  DATA.requirements=DATA.requirements.filter(r=>r.id!==id);
+  renderRequirements();showToast('Requirement removed');
+}
+
+// ===== UTILS =====
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
+document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.target.id==='modal-overlay') closeModal(); });
+
+function showToast(msg, type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=type==='error'?'var(--danger)':'var(--accent)';
+  t.style.color=type==='error'?'#fff':'#000';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
