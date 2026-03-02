@@ -365,8 +365,8 @@ function doLogout(){
 function buildNav(){
   const isAdmin = currentUser.role==='admin';
   const pages = isAdmin
-    ? [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'schedule',icon:'📅',label:'Schedule'},{id:'trainers',icon:'👥',label:'Trainers'},{id:'colleges',icon:'🏫',label:'Colleges'},{id:'requirements',icon:'📋',label:'Upcoming'}]
-    : [{id:'dashboard',icon:'📊',label:'Home'},{id:'schedule',icon:'📅',label:'My Schedule'},{id:'colleges',icon:'🏫',label:'Colleges'},{id:'requirements',icon:'📋',label:'Requirements'}];
+    ? [{id:'dashboard',icon:'📊',label:'Dashboard'},{id:'schedule',icon:'📅',label:'Schedule'},{id:'trainers',icon:'👥',label:'Trainers'},{id:'colleges',icon:'🏫',label:'Colleges'},{id:'requirements',icon:'📋',label:'Upcoming'},{id:'reports',icon:'📈',label:'Reports'}]
+    : [{id:'dashboard',icon:'📊',label:'Home'},{id:'schedule',icon:'📅',label:'My Schedule'},{id:'colleges',icon:'🏫',label:'Colleges'},{id:'requirements',icon:'📋',label:'Requirements'},{id:'reports',icon:'📈',label:'Reports'}];
   
   document.getElementById('bottom-nav').innerHTML = pages.map(p=>`
     <button class="bnav-item" id="bnav-${p.id}" onclick="navigate('${p.id}')">
@@ -391,6 +391,7 @@ function navigate(page){
   else if(page==='trainers') renderTrainers();
   else if(page==='colleges') renderColleges();
   else if(page==='requirements') renderRequirements();
+  else if(page==='reports') renderReports();
 }
 
 // ===== DASHBOARD =====
@@ -802,6 +803,140 @@ function saveRequirement(){
 function deleteReq(id){
   DATA.requirements=DATA.requirements.filter(r=>r.id!==id);
   renderRequirements();showToast('Requirement removed');
+}
+
+// ===== REPORTS =====
+function renderReports(){
+  document.getElementById('fab').classList.add('hidden');
+  const html=`<div class="page">
+    <div class="page-header"><div class="page-title">Reports</div><div class="page-sub">Export data to Excel</div></div>
+
+    <div class="card">
+      <div class="card-title">🏫 College-wise Training History</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">All sessions grouped by college — topics, trainers, dates, status.</p>
+      <button class="btn btn-primary" style="width:auto;padding:12px 24px" onclick="exportCollegeHistory()">⬇ Download Excel</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 Monthly Schedule Report</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">All scheduled & completed sessions filtered by month.</p>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <select id="rep-month" style="width:auto;margin:0">
+          ${['January','February','March','April','May','June','July','August','September','October','November','December']
+            .map((m,i)=>`<option value="${i+1}" ${i+1===new Date().getMonth()+1?'selected':''}>${m}</option>`).join('')}
+        </select>
+        <select id="rep-year" style="width:auto;margin:0">
+          <option value="2025">2025</option>
+          <option value="2026" selected>2026</option>
+          <option value="2027">2027</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" style="width:auto;padding:12px 24px" onclick="exportMonthly()">⬇ Download Excel</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Pending / Open Requirements</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">All open training requests from colleges with priority and details.</p>
+      <button class="btn btn-primary" style="width:auto;padding:12px 24px" onclick="exportRequirements()">⬇ Download Excel</button>
+    </div>
+  </div>`;
+  document.getElementById('main-content').innerHTML=html;
+}
+
+function loadSheetJS(cb){
+  if(window.XLSX){cb();return;}
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload=cb; document.head.appendChild(s);
+}
+
+function downloadExcel(wb, filename){
+  XLSX.writeFile(wb, filename);
+  showToast('Excel downloaded!');
+}
+
+function exportCollegeHistory(){
+  loadSheetJS(()=>{
+    const wb=XLSX.utils.book_new();
+    DATA.colleges.forEach(c=>{
+      const sessions=DATA.sessions.filter(s=>s.collegeId===c.id);
+      const rows=sessions.map(s=>{
+        const trainer=DATA.users.find(u=>u.id===s.trainerId);
+        return {
+          'Topic': s.topic,
+          'Trainer': trainer?.name||'',
+          'Date': s.date,
+          'Time': s.time,
+          'Duration (hrs)': s.duration,
+          'Status': s.status.charAt(0).toUpperCase()+s.status.slice(1),
+          'Notes': s.notes||''
+        };
+      });
+      if(rows.length===0) rows.push({'Topic':'No sessions yet','Trainer':'','Date':'','Time':'','Duration (hrs)':'','Status':'','Notes':''});
+      const ws=XLSX.utils.json_to_sheet(rows);
+      ws['!cols']=[{wch:30},{wch:20},{wch:12},{wch:8},{wch:14},{wch:12},{wch:30}];
+      const sheetName=c.name.substring(0,28).replace(/[\/\\?*\[\]]/g,'');
+      XLSX.utils.book_append_sheet(wb,ws,sheetName);
+    });
+    downloadExcel(wb,'SkillsMetrix_College_History.xlsx');
+  });
+}
+
+function exportMonthly(){
+  loadSheetJS(()=>{
+    const month=parseInt(document.getElementById('rep-month').value);
+    const year=parseInt(document.getElementById('rep-year').value);
+    const sessions=DATA.sessions.filter(s=>{
+      const d=new Date(s.date);
+      return d.getMonth()+1===month && d.getFullYear()===year;
+    });
+    const rows=sessions.map(s=>{
+      const college=DATA.colleges.find(c=>c.id===s.collegeId);
+      const trainer=DATA.users.find(u=>u.id===s.trainerId);
+      return {
+        'Date': s.date,
+        'Time': s.time,
+        'Topic': s.topic,
+        'College': college?.name||'',
+        'City': college?.city||'',
+        'Trainer': trainer?.name||'',
+        'Duration (hrs)': s.duration,
+        'Status': s.status.charAt(0).toUpperCase()+s.status.slice(1),
+        'Notes': s.notes||''
+      };
+    });
+    const monthName=['January','February','March','April','May','June','July','August','September','October','November','December'][month-1];
+    if(rows.length===0){ showToast('No sessions for this month','error'); return; }
+    const ws=XLSX.utils.json_to_sheet(rows);
+    ws['!cols']=[{wch:12},{wch:8},{wch:28},{wch:28},{wch:14},{wch:20},{wch:14},{wch:12},{wch:30}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,`${monthName} ${year}`);
+    downloadExcel(wb,`SkillsMetrix_Schedule_${monthName}_${year}.xlsx`);
+  });
+}
+
+function exportRequirements(){
+  loadSheetJS(()=>{
+    const reqs=DATA.requirements.filter(r=>r.status==='open');
+    if(reqs.length===0){ showToast('No open requirements','error'); return; }
+    const rows=reqs.map(r=>{
+      const college=DATA.colleges.find(c=>c.id===r.collegeId);
+      return {
+        'College': college?.name||'',
+        'City': college?.city||'',
+        'Topic / Program': r.topic,
+        'Requested Date': r.requestedDate,
+        'Priority': r.priority.charAt(0).toUpperCase()+r.priority.slice(1),
+        'Status': r.status.toUpperCase(),
+        'Description': r.description
+      };
+    });
+    const ws=XLSX.utils.json_to_sheet(rows);
+    ws['!cols']=[{wch:30},{wch:14},{wch:28},{wch:15},{wch:10},{wch:10},{wch:50}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Open Requirements');
+    downloadExcel(wb,'SkillsMetrix_Open_Requirements.xlsx');
+  });
 }
 
 // ===== UTILS =====
